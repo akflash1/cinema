@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+
+{% block content %}<br>
+
+    <div style="width: 100%; height: auto; display: flex; justify-content: center">
+        <form>
+            <label>
+                <select name="day" onchange="this.form.submit()">
+                    <option value="today" {% if day == 'today' %}selected{% endif %}>Today</option>
+                    <option value="tomorrow" {% if day == 'tomorrow' %}selected{% endif %}>Tomorrow</option>
+                </select>
+            </label>
+            <label>
+                <select name="sort_by" onchange="this.form.submit()">
+                    <option value="default" {% if sort_by == 'default' %}selected{% endif %}>Default sorting</option>
+                    <option value="price" {% if sort_by == 'price' %}selected{% endif %}>Sort by price</option>
+                    <option value="time" {% if sort_by == 'time' %}selected{% endif %}>Sort by time</option>
+                </select>
+            </label>
+        </form>
+    </div>
+
+    <div class="container">
+        <h2>{% if day == 'today' %} Today {{ today_date }} {% else %} Tomorrow {{ tomorrow_date }} {% endif %}</h2>
+        <div class="row row-cols-4">
+            {% if films %}
+                {% for film in films %}
+                    <div class="col">
+                        <div class="card mb-3 mx-auto" style="width: 18rem;">
+                            <div class="card-body">
+                                <h5 class="card-title">{{ film.name }}</h5>
+                                <h6 class="card-subtitle mb-2 text-muted">{{ film.description }}</h6>
+                                {% for session in film.session.all %}
+                                    {% if session.date == today_date %}
+                                        {% with hall=session.hall %}
+                                            <p class="card-text">Hall: {{ hall.name }}</p>
+                                            <p class="card-text">{{ session.time_start }} - {{ session.time_end }}</p>
+                                            <p class="card-text">Price: {{ session.price }}</p>
+                                            <p class="card-text">Available seats: {{ session.rest_of_seats }}</p>
+
+                                            {% if user.is_authenticated %}
+                                                <a href="{% url 'purchase_detail' session.id %}"
+                                                   class="btn btn-success">Buy Tickets</a>
+                                            {% endif %}
+
+                                            {% if session.rest_of_seats == hall.size and user.is_superuser %}
+                                                <a href="{% url 'update_session' session.id %}" class="btn btn-danger">Edit
+                                                    session</a>
+                                                {% if not hall.sessions.exists %}
+                                                    <a href="{% url 'update_hall' hall.id %}" class="btn btn-danger">Update
+                                                        Hall</a>
+                                                {% endif %}
+                                            {% endif %}
+                                            <p><<<>>></p>
+                                        {% endwith %}
+                                    {% endif %}
+                                {% empty %}
+                                    <p>No sessions available</p>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                {% empty %}
+                    <p>No films available {% if day == 'today' %} today {% else %} tomorrow {% endif %}</p>
+                {% endfor %}
+            {% else %}
+                <p>No films available {% if day == 'today' %} today {% else %} tomorrow {% endif %}</p>
+            {% endif %}
+        </div>
+    </div>
+
+
+{% endblock %}
