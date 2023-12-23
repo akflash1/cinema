@@ -1,10 +1,11 @@
 from datetime import timedelta, date
 from django.contrib.auth.mixins import UserPassesTestMixin, LoginRequiredMixin
 from django.contrib.auth.views import LoginView, LogoutView
+from django.db import transaction
 from django.shortcuts import redirect
-from django.views.generic import CreateView, ListView
-from cinema_app.forms import UserForm, HallForm, SessionForm, FilmForm
-from cinema_app.models import Session, Film
+from django.views.generic import CreateView, ListView, UpdateView, DetailView
+from cinema_app.forms import UserForm, HallForm, SessionForm, FilmForm, PurchaseForm
+from cinema_app.models import Session, Film, Purchase, Hall
 
 
 class AdminPassedMixin(UserPassesTestMixin):
@@ -148,3 +149,64 @@ class FilmListView(ListView):
             queryset = Film.objects.filter(session__date=today)
 
         return queryset
+
+
+class FilmDetailView(DetailView):
+    model = Session
+    template_name = 'detail_film.html'
+    extra_context = {'form': PurchaseForm()}
+    login_url = 'login/'
+
+
+class SessionUpdateView(AdminPassedMixin, UpdateView):
+    model = Session
+    fields = ('time_start', 'time_end', 'price', 'hall', 'film',)
+    template_name = 'update_session.html'
+    queryset = Session.objects.all()
+    success_url = '/'
+    login_url = 'login/'
+
+
+class HallUpdateView(AdminPassedMixin, UpdateView):
+    model = Hall
+    fields = ('name', 'size',)
+    template_name = 'update_hall.html'
+    queryset = Hall.objects.all()
+    success_url = '/'
+    login_url = 'login/'
+
+
+class PurchaseCreateView(CreateView):
+    form_class = PurchaseForm
+    template_name = 'purchase_create.html'
+    success_url = '/'
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs.update(
+            {"session_id": self.kwargs['session_id'], "request": self.request}
+        )
+        return kwargs
+
+    def form_valid(self, form):
+        obj = form.save(commit=False)
+        obj.ticket = form.session
+        obj.buyer = self.request.user
+        total_money = obj.ticket.price * obj.amount
+        obj.buyer.total_spent += total_money
+        obj.ticket.rest_of_seats -= obj.amount
+        with transaction.atomic():
+            obj.ticket.save()
+            obj.buyer.save()
+            obj.save()
+        return super().form_valid(form=form)
+
+    def form_invalid(self, form):
+        return redirect('/')
+
+
+class CartListView(LoginRequiredMixin, ListView):
+    model = Purchase
+    template_name = 'cart.html'
+    queryset = Purchase.objects.all()
+    login_url = 'login/'

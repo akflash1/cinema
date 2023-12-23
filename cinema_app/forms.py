@@ -2,7 +2,7 @@ from django.contrib import messages
 from django.contrib.auth.forms import UserCreationForm
 from django.forms import ModelForm, TimeInput, DateInput
 
-from cinema_app.models import User, Hall, Session, Film
+from cinema_app.models import User, Hall, Session, Film, Purchase
 
 
 class UserForm(UserCreationForm):
@@ -19,21 +19,25 @@ class HallForm(ModelForm):
     def __init__(self, *args, **kwargs):
         if 'request' in kwargs:
             self.request = kwargs.pop('request')
+        super().__init__(*args, **kwargs)
 
     def clean_name(self):
         name = self.cleaned_data.get('name')
 
         if len(name) == 0:
-            self.add_error(None, 'Eror')
-            messages.eror(self.request, 'name must greater than 0')
+            self.add_error('name', 'Error')
+            messages.error(self.request, 'Name must be greater than 0')
+
+        return name
 
     def clean_size(self):
         size = self.cleaned_data.get('size')
 
         if size <= 0:
-            self.add_error(None, 'Eror')
-            messages.error(self.request, 'size be greater than 0')
-            return size
+            self.add_error('size', 'Error')
+            messages.error(self.request, 'Size must be greater than 0')
+
+        return size
 
 
 class FilmForm(ModelForm):
@@ -148,3 +152,33 @@ class SessionForm(ModelForm):
             messages.error(self.request, 'price must be greater than 0')
 
         return price
+
+
+class PurchaseForm(ModelForm):
+    class Meta:
+        model = Purchase
+        fields = ('amount',)
+
+    def __init__(self, *args, **kwargs):
+        if 'session_id' in kwargs:
+            self.session_id = kwargs.pop('session_id')
+
+        if 'request' in kwargs:
+            self.request = kwargs.pop('request')
+
+        super().__init__(*args, **kwargs)
+
+    def clean(self):
+        cleaned_data = super().clean()
+        amount = cleaned_data.get('amount')
+        session = Session.objects.get(pk=self.session_id)
+        self.session = session
+
+        if amount <= 0:
+            self.add_error(None, 'Error')
+            messages.error(self.request, 'Amount must be greater than 0')
+            return amount
+
+        if amount > session.rest_of_seats:
+            self.add_error(None, 'Error')
+            messages.error(self.request, 'Rest of seats must be greater than amount')

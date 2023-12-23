@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <h1>Your cart:</h1>
+    <br>
+    <h2>{{ user }}</h2><br>
+
+    {% for purchase in purchase_list %}
+    {% if purchase.buyer == request.user %}
+
+            Film: {{ purchase.ticket.film.name }} >>> Bought: {{ purchase.amount }}>>
+        Session: {{ purchase.ticket.time_start }} >> Date: {{ purchase.ticket.film.date_start }}<br>
+
+        {% endif %}
+    {% endfor %}
+{% endblock %}

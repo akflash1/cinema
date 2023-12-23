@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <h2>{{ session.film.name }}</h2>
+    <p>{{ session.film.description }}</p>
+
+
+        <form method="post" action="{% url 'purchase_create' session.id %}">
+            {% csrf_token %}
+
+            {{ form.as_p }}
+            <button type="submit">Buy</button>
+        </form>
+
+{% endblock %}
