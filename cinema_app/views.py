@@ -124,7 +124,7 @@ class FilmListView(ListView):
         sessions_selected_day = Session.objects.filter(date=selected_date)
 
         if sort_by_selected == 'price':
-            films_selected_day = films_selected_day.order_by('session__price')
+            films_selected_day = films_selected_day.order_by('-session__price')
         elif sort_by_selected == 'time':
             films_selected_day = films_selected_day.order_by('session__time_start')
 
